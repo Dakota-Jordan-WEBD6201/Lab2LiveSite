@@ -1,3 +1,12 @@
+/*************************************************************************************************************************************
+ * Written By: Dakota Parrish 100764514, Jordan Wriker 100445715
+ * Program Name: WEBD6201-JQuery And Form Validation
+ * Due Date: Sunday February 27, 2022
+ * Description: Added login and register page functionality using JQuery. Used Regular expressions to validate each input
+ * field on register page. Once User has successfully logged in, username is injected into nav bar between contact us and
+ * login/logout. If there is an invalid input on the register page, error is shown. Once user has correct information entered on register page,
+ * console displays output.
+ */
 class User
 {
    // TODO: missing Getters and Setters
@@ -248,7 +257,10 @@ class User
 
             contactList.innerHTML = data;
 
-            
+            $("#addButton").on("click",() =>
+            {
+                location.href = "edit.html#add";
+            });
 
             $("button.delete").on("click", function()
             {
@@ -266,11 +278,6 @@ class User
                 location.href = "edit.html#" + $(this).val();
             });
         }
-
-        $("#addButton").on("click",() =>
-        {
-            location.href = "edit.html#add";
-        });
     }
 
     function DisplayEditPage()
@@ -340,13 +347,19 @@ class User
                 break;
         }
     }
-
+    /**
+     * DisplayLoginPage Function - Displays the Login page.
+     *
+     */
     function DisplayLoginPage()
     {
         console.log("Login Page");
         let messageArea = $("#messageArea");
         messageArea.hide();
 
+        /**
+         * Click event for login button
+         */
         $("#loginButton").on("click", function()
         {
             let success = false;
@@ -402,6 +415,11 @@ class User
         });
     }
 
+    /**
+     * CheckLogin() - Method that swaps the login navbar item to logout as well as inserts
+     * the username for the login in between the Contact Us navbar item and Login/Logout navbar item.
+     *
+     */
     function CheckLogin()
     {
         // if user is logged in, then...
@@ -412,6 +430,7 @@ class User
                 `<a id="logout" class="nav-link" href="#"><i class="fas fa-sign-out-alt"></i> Logout</a>`
             );
 
+            /*Performs logout action*/
             $("#logout").on("click", function()
             {
                 // perform logout
@@ -432,7 +451,8 @@ class User
 
 
     /**
-     * RegistrationPageValidation Function -
+     * RegistrationPageValidation Function - This method validates an input text field in the form and displays
+     * an error in the message area located on the register.html page.
      *
      * @param {*} input_field_ID
      * @param {*} regular_expression
@@ -460,6 +480,15 @@ class User
         });
     }
 
+    /**
+     * Takes the password and confirm password values and breaks them in to character arrays.
+     * It then checks to see if both arrays are the same length and if so compares each character.
+     * Returns true or false depending on if the two strings match.
+     * 
+     * @param {string} password 
+     * @param {string} check_password 
+     * @returns {boolean} isMatch
+     */
     function ConfirmPassword(password, check_password)
     {
         let isMatch = true;
@@ -476,14 +505,12 @@ class User
                     isMatch = false;
                 }
             }
-
         }
         else
         {
             isMatch = false;
         }
-        
-        
+
         if(isMatch == false)
         {
             return isMatch;
@@ -494,7 +521,8 @@ class User
         }
     }
     /**
-     * RegistrationFormValidation Function -
+     * RegistrationFormValidation Function - Validates for each input on the register.html page by using Regular expressions
+     * as well as using the RegistrationPageValidation() method.
      *
      */
     function RegistrationFormValidation()
@@ -509,7 +537,7 @@ class User
     }
 
     /**
-     * DisplayRegisterPage Function - 
+     * DisplayRegisterPage Function - Displays the registration page.
      *
      */
     function DisplayRegisterPage()
@@ -522,6 +550,10 @@ class User
         password.text = "Password";
         RegistrationFormValidation();
         
+        /**
+         *  Click event for the submit button. Checks to see if all fields have data and if they do it check to see if both passwords are the same.
+         * If the data is fine a new User is created and the form is reset. If there is a problem with the data an error is displayed. 
+         */
         $("#submitButton").on("click", function(event)
         {
             
@@ -543,7 +575,6 @@ class User
                             }
                             else
                             {
-                                //TODO: Figure out why first name validation isn't working on form
                                 let newUser = new User(FirstName.value, lastName.value, emailAddress.value,password.value);
                                 console.log(newUser.toString() + "\nCreated!");
                                 FirstName.value = "";
@@ -624,6 +655,7 @@ class User
             break;
         }
 
+        //Calls the CheckLogin() function
         CheckLogin();
 
     }
