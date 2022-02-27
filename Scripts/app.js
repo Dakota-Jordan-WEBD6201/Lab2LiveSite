@@ -268,9 +268,9 @@ class User
         }
 
         $("#addButton").on("click",() =>
-            {
-                location.href = "edit.html#add";
-            });
+        {
+            location.href = "edit.html#add";
+        });
     }
 
     function DisplayEditPage()
