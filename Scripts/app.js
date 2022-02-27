@@ -466,14 +466,23 @@ class User
         let passwordSplit = password.split('');
         let check_passwordSplit = check_password.split('');
 
-        for(i = 0; i < check_passwordSplit.length; i++)
+        if(passwordSplit.length == check_passwordSplit.length)
         {
-            if(passwordSplit[i] != check_passwordSplit[i])
+            for(i = 0; i < check_passwordSplit.length; i++)
             {
-                console.log("Passwords do not match");
-                isMatch = false;
+                if(passwordSplit[i] != check_passwordSplit[i])
+                {
+                    console.log("Passwords do not match");
+                    isMatch = false;
+                }
             }
+
         }
+        else
+        {
+            isMatch = false;
+        }
+        
         
         if(isMatch == false)
         {
