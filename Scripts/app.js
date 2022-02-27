@@ -248,10 +248,7 @@ class User
 
             contactList.innerHTML = data;
 
-            $("#addButton").on("click",() =>
-            {
-                location.href = "edit.html#add";
-            });
+            
 
             $("button.delete").on("click", function()
             {
@@ -269,6 +266,11 @@ class User
                 location.href = "edit.html#" + $(this).val();
             });
         }
+
+        $("#addButton").on("click",() =>
+            {
+                location.href = "edit.html#add";
+            });
     }
 
     function DisplayEditPage()
