@@ -2,38 +2,21 @@
     "users":
     [
         {
-            "FirstName": "John",
-            "LastName": "Smith",
+            "DisplayName": "John Smith",
             "EmailAddress": "john.smith@example.com",
             "Username": "johnsmith",
             "Password": "123456"
         },
         {
-            "FirstName": "May",
-            "LastName": "Smith",
+            "DisplayName": "May Smith",
             "EmailAddress": "may.smith@example.com",
             "Username": "maysmith",
             "Password": "123456"
         },
         {
-            "FirstName": "Admin",
-            "LastName": "Admin",
+            "DisplayName": "Admin",
             "EmailAddress": "admin@example.com",
             "Username": "admin",
-            "Password": "123456"
-        },
-        {
-            "FirstName": "Dakota",
-            "LastName": "Parrish",
-            "EmailAddress": "dparrish@example.com",
-            "Username": "dakotaparrish",
-            "Password": "123456"
-        },
-        {
-            "FirstName": "Jordan",
-            "LastName": "Wriker",
-            "EmailAddress": "jwriker@example.com",
-            "Username": "jordanwriker",
             "Password": "123456"
         }
     ]

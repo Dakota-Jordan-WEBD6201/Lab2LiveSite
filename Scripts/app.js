@@ -1,247 +1,165 @@
-/*************************************************************************************************************************************
+/*************************************************************************************************************************************************
  * Written By: Dakota Parrish 100764514, Jordan Wriker 100445715
- * Program Name: WEBD6201-JQuery And Form Validation
- * Due Date: Sunday February 27, 2022
- * Description: Added login and register page functionality using JQuery. Used Regular expressions to validate each input
- * field on register page. Once User has successfully logged in, username is injected into nav bar between contact us and
- * login/logout. If there is an invalid input on the register page, error is shown. Once user has correct information entered on register page,
- * console displays output.
- */
-class User
-{
-   // TODO: missing Getters and Setters
-
-    // constructor
-    constructor(firstName = "", lastName = "",  emailAddress = "", password = "")
-    {
-        this.FirstName = firstName;
-        this.LastName = lastName;
-        this.UserName = firstName.toLowerCase() + lastName.toLowerCase();
-        this.EmailAddress = emailAddress;
-        this.Password = password;
-    }   
-
-    // overriden methods
-    toString() 
-    {
-      return `Name : ${this.FirstName} ${this.LastName}\nEmail Address : ${this.EmailAddress}`;
-    }   
-
-    // utility methods
-    toJSON()
-    {
-        return {
-            "FirstName": this.FirstName,
-            "LastName": this.LastName,
-            "EmailAddress": this.EmailAddress,
-            "Password": this.Password
-        }
-    }
-
-    fromJSON(data)
-    {
-        this.FirstName = data.FirstName;
-        this.LastName = data.LastName;
-        this.EmailAddress = data.EmailAddress;
-        this.UserName = data.Username;
-        this.Password = data.Password;
-    }
-
-    serialize()
-    {
-        if(this.FirstName !== "" && this.LastName !== "" && this.Username !== "" && this.EmailAddress !== "" && this.Password !== "")
-        {
-            return `${this.FirstName},${this.LastName},${this.EmailAddress},${this.UserName},${this.Password},`;
-        }
-        console.error("One or more properties of the User Object are missing or invalid");
-        return null;
-    }
-    
-    deserialize(data) // assume that data is in a comma-separated format (string array of properties)
-    {
-        let propertyArray = data.split(",");
-        this.FirstName = propertyArray[0];
-        this.LastName = propertyArray[1];
-        this.UserName = propertyArray[2];
-        this.EmailAddress = propertyArray[3];
-        this.Password = propertyArray[4];
-    }
-}
-
-// IIFE -- Immediately Invoked Function Express
-// AKA anonymous self-executing function
-
+ * Program Name: WEBD6201-Lab3-Fun With Ajax
+ * Due Date: Wednesday March 23, 2022
+ * Description: Using what we learned from previous classes with AJAX, this lab demonstrates adding security to the task list page, and only 
+ * allows access to users who are currently signed in. We demonstrate adding the task-list page to a routing table, as well as demonstrating the
+ * use of the callback functions to show the active link on the newly created task-list page/nav item. This all demonstrates the use of AJAX to 
+ * create a SPA (Single-Page Application).
+ ************************************************************************************************************************************************/
 "use strict";
-(function()
-{
-    /**
-     * This function uses AJAX open a connection to the url and returns data to the callback function
-     *
-     * @param {string} method
-     * @param {string} url
-     * @param {Function} callback
-     */
-    function AjaxRequest(method, url, callback)
-    {
-        // step 1 - create a new XHR object
-        let XHR = new XMLHttpRequest();
-
-        // step 2 - create an event
-        XHR.addEventListener("readystatechange", ()=>
-        {
-            if(XHR.readyState === 4 && XHR.status === 200)
-            {
-               callback(XHR.responseText);
+(function () {
+    function AuthGuard() {
+        let protected_routes = [
+            "contact-list",
+            //  PART D: Adds task-list to the protected routes
+            "task-list"
+        ];
+        if (protected_routes.indexOf(router.ActiveLink) > -1) {
+            if (!sessionStorage.getItem("user")) {
+                router.ActiveLink = "login";
             }
-        });
-
-        // step 3 - open a request
-        XHR.open(method, url);
-
-        // step 4 - send the request
-        XHR.send();
+        }
     }
-
-    /**
-     * This function loads the Navbar from the header file and injects into the page
-     *
-     * @param {string} data
-     */
-    function LoadHeader(data)
-    {
-        $("header").html(data);
+    function LoadLink(link, data = "") {
+        router.ActiveLink = link;
+        AuthGuard();
+        router.LinkData = data;
+        history.pushState({}, "", router.ActiveLink);
+        document.title = router.ActiveLink.substring(0, 1).toUpperCase() + router.ActiveLink.substring(1);
+        $("ul>li>a").each(function () {
+            $(this).removeClass("active");
+        });
+        console.log(document.title);
         $(`li>a:contains(${document.title})`).addClass("active");
         CheckLogin();
+        LoadContent();
     }
-
-    function DisplayHome()
-    {
-        console.log("Home Page");
-
-        
-
-        $("#AboutUsButton").on("click", () => 
-        {
-            location.href = "about.html";
+    function AddNavigationEvents() {
+        let NavLinks = $("ul>li>a");
+        NavLinks.off("click");
+        NavLinks.off("mouseover");
+        NavLinks.on("click", function () {
+            LoadLink($(this).attr("data"));
         });
-
+        NavLinks.on("mouseover", function () {
+            $(this).css("cursor", "pointer");
+        });
+    }
+    function AddLinkEvents(link) {
+        let linkQuery = $(`a.link[data=${link}]`);
+        linkQuery.off("click");
+        linkQuery.off("mouseover");
+        linkQuery.off("mouseout");
+        linkQuery.css("text-decoration", "underline");
+        linkQuery.css("color", "blue");
+        linkQuery.on("click", function () {
+            LoadLink(`${link}`);
+        });
+        linkQuery.on("mouseover", function () {
+            $(this).css('cursor', 'pointer');
+            $(this).css('font-weight', 'bold');
+        });
+        linkQuery.on("mouseout", function () {
+            $(this).css('font-weight', 'normal');
+        });
+    }
+    function LoadHeader() {
+        $.get("./Views/components/header.html", function (html_data) {
+            $("header").html(html_data);
+            AddNavigationEvents();
+            CheckLogin();
+        });
+    }
+    function LoadContent() {
+        let page_name = router.ActiveLink;
+        let callback = ActiveLinkCallBack();
+        $.get(`./Views/content/${page_name}.html`, function (html_date) {
+            $("main").html(html_date);
+            callback();
+        });
+    }
+    function LoadFooter() {
+        $.get(`./Views/components/footer.html`, function (html_date) {
+            $("footer").html(html_date);
+        });
+    }
+    function DisplayHomePage() {
+        console.log("Home Page");
+        $("#AboutUsButton").on("click", () => {
+            LoadLink("about");
+        });
         $("main").append(`<p id="MainParagraph" class="mt-3">This is the Main Paragraph</p>`);
-
-        $("body").append(`
-        <article class="container">
-            <p id="ArticleParagraph" class="mt-3">This is the Article Paragraph</p>
-            </article>`);
+        $("main").append(`<article>
+        <p id="ArticleParagraph" class ="mt-3">This is the Article Paragraph</p>
+        </article>`);
     }
-
-    function DisplayAboutPage()
-    {
-        console.log("About Us Page");
+    function DisplayProductsPage() {
+        console.log("Products Page");
     }
-
-    function DisplayProjectsPage()
-    {
-        console.log("Our Projects Page");
+    function DisplayServicesPage() {
+        console.log("Services Page");
     }
-
-    function DisplayServicesPage()
-    {
-        console.log("Our Services Page");
+    function DisplayAboutPage() {
+        console.log("About Page");
     }
-
-    /**
-     * Adds a Contact Object to localStorage
-     *
-     * @param {string} fullName
-     * @param {string} contactNumber
-     * @param {string} emailAddress
-     */
-    function AddContact(fullName, contactNumber, emailAddress)
-    {
+    function AddContact(fullName, contactNumber, emailAddress) {
         let contact = new core.Contact(fullName, contactNumber, emailAddress);
-        if(contact.serialize())
-        {
+        if (contact.serialize()) {
             let key = contact.FullName.substring(0, 1) + Date.now();
-
             localStorage.setItem(key, contact.serialize());
         }
     }
-
-    /**
-     * This method validates an input text field in the form and displays
-     * an error in the message area
-     *
-     * @param {string} input_field_ID
-     * @param {RegExp} regular_expression
-     * @param {string} error_message
-     */
-    function ValidateField(input_field_ID, regular_expression, error_message)
-    {
+    function ValidateField(fieldID, regular_expression, error_message) {
         let messageArea = $("#messageArea").hide();
-        
-        $("#" + input_field_ID).on("blur", function()
-        {
-            let inputFieldText = $(this).val();
-
-            if(!regular_expression.test(inputFieldText))
-            {
-                $(this).trigger("focus").trigger("select"); 
-                messageArea.addClass("alert alert-danger").text(error_message).show(); 
+        $("#" + fieldID).on("blur", function () {
+            let text_value = $(this).val();
+            if (!regular_expression.test(text_value)) {
+                $(this).trigger("focus").trigger("select");
+                messageArea.addClass("alert alert-danger").text(error_message).show();
             }
-            else
-            {
+            else {
                 messageArea.removeAttr("class").hide();
             }
         });
     }
-
-    function ContactFormValidation()
-    {
-        ValidateField("fullName", /^([A-Z][a-z]{1,3}\.?\s)?([A-Z][a-z]{1,})+([\s,-]([A-Z][a-z]{1,}))*$/,"Please enter a valid Full Name.");
-        ValidateField("contactNumber", /^(\+\d{1,3}[\s-.])?\(?\d{3}\)?[\s-.]?\d{3}[\s-.]?\d{4}$/, "Please enter a valid Contact Number.");
+    function ContactFormValidation() {
+        ValidateField("fullName", /^([A-Z][a-z]{1,3}.?\s)?([A-Z][a-z]{1,})((\s|,|-)([A-Z][a-z]{1,}))*(\s|,|-)([A-Z][a-z]{1,})$/, "Please enter a valid Full Name. This must include at least a Capitalized First Name and a Capitalized Last Name.");
+        ValidateField("contactNumber", /^(\+\d{1,3}\s)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/, "Please enter a valid Contact Number. Example: (416) 555-5555");
         ValidateField("emailAddress", /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,10}$/, "Please enter a valid Email Address.");
     }
-
-    function DisplayContactPage()
-    {
-        console.log("Contact Us Page");
-
+    function DisplayContactPage() {
+        console.log("Contact Page");
+        $("a[data='contact-list']").off("click");
+        $("a[data='contact-list']").on("click", function () {
+            LoadLink("contact-list");
+        });
         ContactFormValidation();
-        
         let sendButton = document.getElementById("sendButton");
         let subscribeCheckbox = document.getElementById("subscribeCheckbox");
-
-        sendButton.addEventListener("click", function()
-        {
-            if(subscribeCheckbox.checked)
-            { 
-                AddContact(fullName.value, contactNumber.value, emailAddress.value);
+        sendButton.addEventListener("click", function (event) {
+            if (subscribeCheckbox.checked) {
+                let fullName = document.forms[0].fullName.value;
+                let contactNumber = document.forms[0].contactNumber.value;
+                let emailAddress = document.forms[0].emailAddress.value;
+                let contact = new core.Contact(fullName, contactNumber, emailAddress);
+                if (contact.serialize()) {
+                    let key = contact.FullName.substring(0, 1) + Date.now();
+                    localStorage.setItem(key, contact.serialize());
+                }
             }
         });
     }
-
-    function DisplayContactListPage()
-    {
-        console.log("Contact-List Page");
-
-        if(localStorage.length > 0)
-        {
+    function DisplayContactListPage() {
+        if (localStorage.length > 0) {
             let contactList = document.getElementById("contactList");
-
-            let data = ""; // data container -> add deserialized data from the localStorage
-
-            let keys = Object.keys(localStorage); // returns a string array of keys
-
-            let index = 1; // counts how many keys
-
-            // for every key in the keys array (collection), loop
-            for (const key of keys) 
-            {
-                let contactData = localStorage.getItem(key); // get localStorage data value related to the key
-
-                let contact = new core.Contact(); // create a new empty contact object
+            let data = "";
+            let keys = Object.keys(localStorage);
+            let index = 1;
+            for (const key of keys) {
+                let contactData = localStorage.getItem(key);
+                let contact = new core.Contact();
                 contact.deserialize(contactData);
-
-                // inject a repeatable row into the contactList
                 data += `<tr>
                 <th scope="row" class="text-center">${index}</th>
                 <td>${contact.FullName}</td>
@@ -249,419 +167,218 @@ class User
                 <td>${contact.EmailAddress}</td>
                 <td class="text-center"><button value="${key}" class="btn btn-primary btn-sm edit"><i class="fas fa-edit fa-sm"></i> Edit</button></td>
                 <td class="text-center"><button value="${key}" class="btn btn-danger btn-sm delete"><i class="fas fa-trash-alt fa-sm"></i> Delete</button></td>
-                </tr>
-                `;
-
+                </tr>`;
                 index++;
             }
-
             contactList.innerHTML = data;
-
-            $("#addButton").on("click",() =>
-            {
-                location.href = "edit.html#add";
-            });
-
-            $("button.delete").on("click", function()
-            {
-                if(confirm("Are you sure?"))
-                {
+            $("button.delete").on("click", function () {
+                if (confirm("Are you sure?")) {
                     localStorage.removeItem($(this).val());
                 }
-
-                // refresh after deleting
-                location.href = "contact-list.html";
+                LoadLink("contact-list");
             });
-
-            $("button.edit").on("click", function()
-            {
-                location.href = "edit.html#" + $(this).val();
+            $("button.edit").on("click", function () {
+                LoadLink("edit", $(this).val());
             });
         }
+        $("#addButton").on("click", () => {
+            LoadLink("edit", "add");
+        });
     }
-
-    function DisplayEditPage()
-    {
+    function DisplayEditPage() {
         console.log("Edit Page");
-
         ContactFormValidation();
-
-        let page = location.hash.substring(1);
-
-        switch(page)
-        {
+        let page = router.LinkData;
+        switch (page) {
             case "add":
                 {
                     $("main>h1").text("Add Contact");
-
                     $("#editButton").html(`<i class="fas fa-plus-circle fa-lg"></i> Add`);
-                
-                    $("#editButton").on("click", (event)=>
-                    {
+                    $("#editButton").on("click", (event) => {
                         event.preventDefault();
-                        // Add Contact
-                        AddContact(fullName.value, contactNumber.value, emailAddress.value);
-                        // refresh the contact-list page
-                        location.href = "contact-list.html";
+                        let fullName = document.forms[0].fullName.value;
+                        let contactNumber = document.forms[0].contactNumber.value;
+                        let emailAddress = document.forms[0].emailAddress.value;
+                        AddContact(fullName, contactNumber, emailAddress);
+                        LoadLink("contact-list");
                     });
-
-                    $("#cancelButton").on("click", () =>
-                    {
-                        location.href = "contact-list.html";
+                    $("#cancelButton").on("click", () => {
+                        LoadLink("contact-list");
                     });
                 }
                 break;
             default:
                 {
-                    // get the contact  info from localStorage
                     let contact = new core.Contact();
                     contact.deserialize(localStorage.getItem(page));
-
-                    // display the contact info in the edit form
                     $("#fullName").val(contact.FullName);
                     $("#contactNumber").val(contact.ContactNumber);
                     $("#emailAddress").val(contact.EmailAddress);
-
-                    // when editButton is pressed - update the contact
-                    $("#editButton").on("click", (event)=>
-                    {
+                    $("#editButton").on("click", (event) => {
                         event.preventDefault();
-
-                        // get any changes from the form
                         contact.FullName = $("#fullName").val();
                         contact.ContactNumber = $("#contactNumber").val();
                         contact.EmailAddress = $("#emailAddress").val();
-
-                        // replace the item in localStorage
                         localStorage.setItem(page, contact.serialize());
-
-                        // return to the contact-list
-                        location.href = "contact-list.html";
+                        LoadLink("contact-list");
                     });
-
-                    $("#cancelButton").on("click", () =>
-                    {
-                        location.href = "contact-list.html";
+                    $("#cancelButton").on("click", () => {
+                        LoadLink("contact-list");
                     });
                 }
                 break;
         }
     }
-    /**
-     * DisplayLoginPage Function - Displays the Login page.
-     *
-     */
-    function DisplayLoginPage()
-    {
+    function CheckLogin() {
+        //PART D: Hides the nav item if the user is NOT logged in
+        $("#task-list").hide();
+        if (sessionStorage.getItem("user")) {
+            //PART D: Shows the nav item once the user is logged in
+            $("#task-list").show();
+            $("#login").html(`<a id="logout" class="nav-link" href="#"><i class="fas fa-sign-out-alt"></i> Logout</a>`);
+            $("#logout").on("click", function () {
+                sessionStorage.clear();
+                $("#login").html(`<a class="nav-link" data="login"><i class="fas fa-sign-in-alt"></i> Login</a>`);
+                AddNavigationEvents();
+                LoadLink("login");
+            });
+        }
+    }
+    function DisplayLoginPage() {
         console.log("Login Page");
         let messageArea = $("#messageArea");
         messageArea.hide();
-
-        /**
-         * Click event for login button
-         */
-        $("#loginButton").on("click", function()
-        {
+        AddLinkEvents("register");
+        $("#loginButton").on("click", function () {
             let success = false;
-
-            // create an empty user object
-            let newUser = new User();
-
-            // use jQuery shortcut to lod the users.json file
-            $.get("./Data/users.json", function(data)
-            {
-                // for every user in the users.json file, loop
-                for (const user of data.users) 
-                {
-                    // check if the username and password entered matches the user data
-                    if(username.value == user.Username && password.value == user.Password)
-                    {
-                        console.log("conditional passed!");
-                        // get the user data from the file and assign it to our empty user object
+            let newUser = new core.User();
+            $.get("./Data/users.json", function (data) {
+                for (const user of data.users) {
+                    let username = document.forms[0].username.value;
+                    let password = document.forms[0].password.value;
+                    if (username == user.Username && password == user.Password) {
                         newUser.fromJSON(user);
                         success = true;
                         break;
                     }
                 }
-
-                 // if username and password matches..success! -> perform the login sequence
-                if(success)
-                {
-                    // add user to session storage
+                if (success) {
                     sessionStorage.setItem("user", newUser.serialize());
-
-                    // hide any error message
                     messageArea.removeAttr("class").hide();
-
-                    // redirect the user to the secure area of the site - contact-list.html
-                    location.href = "contact-list.html";
+                    LoadLink("contact-list");
                 }
-                else
-                {
-                    // display an error message
+                else {
                     $("#username").trigger("focus").trigger("select");
-                    messageArea.addClass("alert alert-danger").text("Error: Invalid Login Credentials").show();
+                    messageArea.addClass("alert alert-danger").text("Error: Invalid Login Information").show();
                 }
             });
         });
-
-        $("#cancelButton").on("click", function()
-        {
-            // clear the login form
+        $("#cancelButton").on("click", function () {
             document.forms[0].reset();
-
-            // return to the home page
-            location.href = "index.html";
+            LoadLink("home");
         });
     }
-
-    /**
-     * CheckLogin() - Method that swaps the login navbar item to logout as well as inserts
-     * the username for the login in between the Contact Us navbar item and Login/Logout navbar item.
-     *
-     */
-    function CheckLogin()
-    {
-        // if user is logged in, then...
-        if(sessionStorage.getItem("user"))
-        {
-            // swap out the login link for logout
-            $("#login").html(
-                `<a id="logout" class="nav-link" href="#"><i class="fas fa-sign-out-alt"></i> Logout</a>`
-            );
-
-            /*Performs logout action*/
-            $("#logout").on("click", function()
-            {
-                // perform logout
-                sessionStorage.clear();
-                
-                // redirect back to login page
-                location.href = "login.html";
-            })
-
-            //Inserts username value into the nav bar between contact us and logout
-            let userName = sessionStorage.getItem("user").split(',')[3];
-            let contactListNavbar = $("a:contains('Contact Us')").parent();
-            let user = sessionStorage.getItem("user").split(',');
-            console.log(user);
-            contactListNavbar.after(`<li class="nav-item"><a class="nav-link disabled">${userName}</a></li>`);
-        }
-    }
-
-
-    /**
-     * RegistrationPageValidation Function - This method validates an input text field in the form and displays
-     * an error in the message area located on the register.html page.
-     *
-     * @param {*} input_field_ID
-     * @param {*} regular_expression
-     * @param {*} error_message
-     */
-    function RegistrationPageValidation(input_field_ID, regular_expression, error_message)
-    {
-        let errorMessage = $("#ErrorMessage");
-
-        $("#" + input_field_ID).on("blur", function()
-        {
-            let inputFieldText = $(this).val();
-
-            if(!regular_expression.test(inputFieldText))
-            {
-                $(this).trigger("focus");
-                $(this).trigger("select");
-                console.log("Testing");
-                errorMessage.show().addClass("alert alert-danger").text(error_message);
-            }
-            else
-            {
-                errorMessage.removeAttr("class").hide();
-            }
-        });
-    }
-
-    /**
-     * Takes the password and confirm password values and breaks them in to character arrays.
-     * It then checks to see if both arrays are the same length and if so compares each character.
-     * Returns true or false depending on if the two strings match.
-     * 
-     * @param {string} password 
-     * @param {string} check_password 
-     * @returns {boolean} isMatch
-     */
-    function ConfirmPassword(password, check_password)
-    {
-        let isMatch = true;
-        let passwordSplit = password.split('');
-        let check_passwordSplit = check_password.split('');
-
-        if(passwordSplit.length == check_passwordSplit.length)
-        {
-            for(i = 0; i < check_passwordSplit.length; i++)
-            {
-                if(passwordSplit[i] != check_passwordSplit[i])
-                {
-                    console.log("Passwords do not match");
-                    isMatch = false;
-                }
-            }
-        }
-        else
-        {
-            isMatch = false;
-        }
-
-        if(isMatch == false)
-        {
-            return isMatch;
-        }
-        else
-        {
-            return isMatch;
-        }
-    }
-    /**
-     * RegistrationFormValidation Function - Validates for each input on the register.html page by using Regular expressions
-     * as well as using the RegistrationPageValidation() method.
-     *
-     */
-    function RegistrationFormValidation()
-    {
-        RegistrationPageValidation("FirstName", /([A-Z][a-z]{1,})/, "Invalid First Name! First Name must be at least 2 letters and start with a capital letter!");
-        RegistrationPageValidation("lastName", /([A-Z][a-z]{1,})/, "Invalid Last Name! Last Name must be at least 2 letters and start with a capital letter!");
-
-        RegistrationPageValidation("emailAddress", /^([a-zA-Z0-9._%-]{8,}@[a-zA-Z0-9-]{4,}\.[a-zA-Z]{2,6})*$/, "Please enter a valid email address");
-        RegistrationPageValidation("password", /^([a-zA-Z0-9._%-]{6,})*$/, "Invalid Password! Password must be at least 6 characters in length");
-
-        RegistrationPageValidation("confirmPassword", /^([a-zA-Z0-9._%-]{6,})*$/, "Invalid Password! Password must be at least 6 characters in length");
-    }
-
-    /**
-     * DisplayRegisterPage Function - Displays the registration page.
-     *
-     */
-    function DisplayRegisterPage()
-    {
+    function DisplayRegisterPage() {
         console.log("Register Page");
-        $("#contentArea").prepend(`<div id="ErrorMessage">ERROR MESSAGE</div>`);
-        $("#ErrorMessage").hide();
-        let errorMessage = $("#ErrorMessage");
-        emailAddress.text = "Email";
-        password.text = "Password";
-        RegistrationFormValidation();
-        
-        /**
-         *  Click event for the submit button. Checks to see if all fields have data and if they do it check to see if both passwords are the same.
-         * If the data is fine a new User is created and the form is reset. If there is a problem with the data an error is displayed. 
-         */
-        $("#submitButton").on("click", function(event)
-        {
-            
-            console.log("Testing");
-            event.preventDefault();
-            if(FirstName.value != null)
-            {
-                if(lastName.value != null)
-                {
-                    if(emailAddress.value != null)
-                    {
-                        if(password.value != null)
-                        {
-                            if(ConfirmPassword(password.value, confirmPassword.value) == false)
-                            {
-                                errorMessage.show().addClass("alert alert-danger").text("Invalid Password! They do not match");
-                                $("#password").trigger("focus");
-                                $("#password").trigger("select");
-                            }
-                            else
-                            {
-                                let newUser = new User(FirstName.value, lastName.value, emailAddress.value,password.value);
-                                console.log(newUser.toString() + "\nCreated!");
-                                FirstName.value = "";
-                                lastName.value = "";
-                                emailAddress.value = "";
-                                password.value = "";
-                                confirmPassword.value = "";
-                            }
-                            
-                        }
-                        else
-                        {
-                            errorMessage.show().addClass("alert alert-danger").text("Error! Password cannot be blank.");
-                            $("#password").trigger("focus");
-                            $("#password").trigger("select");                            
-                        }                
-                    }
-                    else
-                    {
-                        errorMessage.show().addClass("alert alert-danger").text("Error! Email Address cannot be blank.");
-                        $("#emailAddress").trigger("focus");
-                        $("#emailAddress").trigger("select");                        
-                    }
-                }
-                else
-                {
-                    errorMessage.show().addClass("alert alert-danger").text("Error! Last Name cannot be blank.");
-                    $("#lastName").trigger("focus");
-                    $("#lastName").trigger("select");                    
-                }
+        AddLinkEvents("login");
+    }
+    function Display404Page() {
+    }
+    /**
+     * AddNewTask() - Adds a new task to the task list
+     *
+     */
+    function AddNewTask() {
+        let messageArea = $("#messageArea");
+        messageArea.hide();
+        let taskInput = $("#taskTextInput");
+        let taskInputValue = taskInput.val();
+        if (taskInput.val() != "" && taskInputValue.charAt(0) != " ") {
+            let newElement = `
+               <li class="list-group-item" id="task">
+               <span id="taskText">${taskInput.val()}</span>
+               <span class="float-end">
+                   <button class="btn btn-outline-primary btn-sm editButton"><i class="fas fa-edit"></i>
+                   <button class="btn btn-outline-danger btn-sm deleteButton"><i class="fas fa-trash-alt"></i></button>
+               </span>
+               <input type="text" class="form-control edit-task editTextInput">
+               </li>
+               `;
+            $("#taskList").append(newElement);
+            messageArea.removeAttr("class").hide();
+            taskInput.val("");
+        }
+        else {
+            taskInput.trigger("focus").trigger("select");
+            messageArea.show().addClass("alert alert-danger").text("Please enter a valid Task.");
+        }
+    }
+    /**
+     * DisplayTaskList - Displays the Task List page
+     *
+     */
+    function DisplayTaskList() {
+        let messageArea = $("#messageArea");
+        messageArea.hide();
+        let taskInput = $("#taskTextInput");
+        $("#newTaskButton").on("click", function () {
+            AddNewTask();
+        });
+        taskInput.on("keypress", function (event) {
+            if (event.key == "Enter") {
+                AddNewTask();
             }
-            else
-            {
-                errorMessage.show().addClass("alert alert-danger").text("Error! First Name cannot be blank.");
-                $("#FirstName").trigger("focus");
-                $("#FirstName").trigger("select");
+        });
+        $("ul").on("click", ".editButton", function () {
+            let editText = $(this).parent().parent().children(".editTextInput");
+            let text = $(this).parent().parent().text();
+            let editTextValue = editText.val();
+            editText.val(text).show().trigger("select");
+            editText.on("keypress", function (event) {
+                if (event.key == "Enter") {
+                    if (editText.val() != "" && editTextValue.charAt(0) != " ") {
+                        editText.hide();
+                        $(this).parent().children("#taskText").text(editTextValue);
+                        messageArea.removeAttr("class").hide();
+                    }
+                    else {
+                        editText.trigger("focus").trigger("select");
+                        messageArea.show().addClass("alert alert-danger").text("Please enter a valid Task.");
+                    }
+                }
+            });
+        });
+        $("ul").on("click", ".deleteButton", function () {
+            if (confirm("Are you sure?")) {
+                $(this).closest("li").remove();
             }
         });
     }
-
- 
-
-    // named function
-    function Start()
-    {
-        console.log("App Started!!");
-
-        AjaxRequest("GET", "header.html", LoadHeader);
-
-        switch (document.title) 
-        {
-          case "Home":
-            DisplayHome();
-            break;
-          case "About Us":
-            DisplayAboutPage();
-            break;
-          case "Our Projects":
-            DisplayProjectsPage();
-            break;
-          case "Our Services":
-            DisplayServicesPage();
-            break;
-          case "Contact-List":
-            DisplayContactListPage();
-            break;
-          case "Contact Us":
-            DisplayContactPage();
-            break;
-          case "Edit":
-            DisplayEditPage();
-            break;
-            case "Login":
-            DisplayLoginPage();
-            break;
-            case "Register":
-            DisplayRegisterPage();
-            break;
+    function ActiveLinkCallBack() {
+        switch (router.ActiveLink) {
+            case "home": return DisplayHomePage;
+            case "about": return DisplayAboutPage;
+            case "products": return DisplayProductsPage;
+            case "services": return DisplayServicesPage;
+            case "contact": return DisplayContactPage;
+            case "contact-list": return DisplayContactListPage;
+            case "edit": return DisplayEditPage;
+            case "login": return DisplayLoginPage;
+            case "register": return DisplayRegisterPage;
+            //PART C: Adds the task list to the active link call back function 
+            case "task-list": return DisplayTaskList;
+            case "404": return Display404Page;
+            default:
+                console.error("ERROR: callback does not exist: " + router.ActiveLink);
+                return new Function();
         }
-
-        //Calls the CheckLogin() function
-        CheckLogin();
-
     }
-    
-
+    function Start() {
+        console.log("App Started!");
+        LoadHeader();
+        LoadLink("home");
+        LoadFooter();
+    }
     window.addEventListener("load", Start);
-
-
 })();
+//# sourceMappingURL=app.js.map
